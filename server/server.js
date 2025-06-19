@@ -28,6 +28,11 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// Friendly root route
+app.get('/', (req, res) => {
+  res.send('🎉 ChatRoom API is running! Welcome!');
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', require('./routes/rooms'));
