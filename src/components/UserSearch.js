@@ -76,6 +76,7 @@ function UserSearch({ onUserSelect, onClose }) {
                   <Avatar username={u.username} size="sm" />
                   <span className="username">{u.username}</span>
                   {loading && <div className="loading-spinner"></div>}
+                  }
                 </div>
               ))
             ) : searchTerm ? (
