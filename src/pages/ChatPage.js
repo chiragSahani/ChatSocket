@@ -5,6 +5,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { useChat } from '../contexts/ChatContext';
 import { messagesAPI } from '../api/messages';
 import { roomsAPI } from '../api/rooms';
+import { privateAPI } from '../api/private';
 import MessageBubble from '../components/MessageBubble';
 import MessageInput from '../components/MessageInput';
 import TypingIndicator from '../components/TypingIndicator';
@@ -18,11 +19,12 @@ function ChatPage() {
   const { socket, joinRoom, leaveRoom, sendMessage, typingUsers, onlineUsers } = useSocket();
   const { messages, addMessage, setMessages } = useChat();
   const [currentMessages, setCurrentMessages] = useState([]);
-  const [roomInfo, setRoomInfo] = useState(null);
+  const [chatInfo, setChatInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
 
   const chatKey = roomId ? `room_${roomId}` : `conversation_${conversationId}`;
+  const isPrivateChat = !!conversationId;
 
   useEffect(() => {
     if (roomId) {
@@ -65,7 +67,11 @@ function ChatPage() {
         messagesAPI.getMessagesByRoom(roomId)
       ]);
       
-      setRoomInfo(roomData);
+      setChatInfo({
+        type: 'room',
+        name: roomData.name,
+        subtitle: 'Public Room'
+      });
       setMessages(chatKey, messagesData);
     } catch (error) {
       console.error('Failed to load room data:', error);
@@ -78,6 +84,14 @@ function ChatPage() {
     try {
       setLoading(true);
       const messagesData = await messagesAPI.getMessagesByConversation(conversationId);
+      
+      // In a real app, you'd fetch the other user's info
+      setChatInfo({
+        type: 'private',
+        name: 'Private Chat',
+        subtitle: 'Direct Message'
+      });
+      
       setMessages(chatKey, messagesData);
     } catch (error) {
       console.error('Failed to load conversation data:', error);
@@ -92,7 +106,8 @@ function ChatPage() {
         ...message,
         sender_id: message.senderId,
         room_id: message.roomId,
-        created_at: message.createdAt
+        created_at: message.createdAt,
+        sender_username: message.senderUsername || 'Unknown User'
       });
     }
   };
@@ -112,6 +127,7 @@ function ChatPage() {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      alert('Failed to send message. Please try again.');
     }
   };
 
@@ -157,14 +173,14 @@ function ChatPage() {
         </button>
         <div className="chat-info">
           <h1 className="chat-title">
-            {roomId ? `#${roomInfo?.name || 'Room'}` : 'Private Chat'}
+            {isPrivateChat ? '💬 ' : '#'}{chatInfo?.name || 'Chat'}
           </h1>
           <p className="chat-subtitle">
-            {roomId ? 'Public Room' : 'Private Conversation'}
+            {chatInfo?.subtitle || (isPrivateChat ? 'Private Conversation' : 'Public Room')}
           </p>
         </div>
         <div className="chat-actions">
-          {roomId && (
+          {!isPrivateChat && (
             <div className="online-count">
               {onlineUsers.size} online
             </div>
@@ -193,11 +209,16 @@ function ChatPage() {
             })
           ) : (
             <div className="empty-chat">
-              <p>No messages yet. Start the conversation!</p>
+              <p>
+                {isPrivateChat 
+                  ? "No messages yet. Start your private conversation!" 
+                  : "No messages yet. Start the conversation!"
+                }
+              </p>
             </div>
           )}
           
-          <TypingIndicator users={getTypingUsers()} />
+          {!isPrivateChat && <TypingIndicator users={getTypingUsers()} />}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -205,6 +226,7 @@ function ChatPage() {
       <MessageInput
         onSendMessage={handleSendMessage}
         roomId={roomId}
+        placeholder={isPrivateChat ? "Send a private message..." : "Type a message..."}
       />
     </div>
   );

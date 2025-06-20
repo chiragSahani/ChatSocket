@@ -5,14 +5,17 @@ import { useChat } from '../contexts/ChatContext';
 import { roomsAPI } from '../api/rooms';
 import { privateAPI } from '../api/private';
 import Avatar from '../components/Avatar';
+import UserSearch from '../components/UserSearch';
+import '../components/UserSearch.css';
 import './DashboardPage.css';
 
 function DashboardPage() {
   const [newRoomName, setNewRoomName] = useState('');
   const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { user, logout } = useAuth();
-  const { rooms, conversations, setRooms, setConversations, addRoom } = useChat();
+  const { rooms, conversations, setRooms, setConversations, addRoom, addConversation } = useChat();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,9 +64,25 @@ function DashboardPage() {
     navigate(`/dm/${conversationId}`);
   };
 
+  const handleUserSelect = (conversation) => {
+    addConversation(conversation);
+    setShowUserSearch(false);
+    navigate(`/dm/${conversation.id}`);
+  };
+
   const filteredRooms = rooms.filter(room =>
     room.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getOtherUserInfo = (conversation) => {
+    const otherUserId = conversation.user1_id === user.id 
+      ? conversation.user2_id 
+      : conversation.user1_id;
+    return {
+      id: otherUserId,
+      username: `User ${otherUserId}` // In a real app, you'd fetch actual usernames
+    };
+  };
 
   return (
     <div className="dashboard-container">
@@ -159,14 +178,18 @@ function DashboardPage() {
         <div className="dashboard-section">
           <div className="section-header">
             <h2>Private Conversations</h2>
+            <button
+              onClick={() => setShowUserSearch(true)}
+              className="btn btn-primary btn-sm"
+            >
+              New Chat
+            </button>
           </div>
 
           <div className="conversations-list">
             {conversations.length > 0 ? (
               conversations.map(conversation => {
-                const otherUserId = conversation.user1_id === user.id 
-                  ? conversation.user2_id 
-                  : conversation.user1_id;
+                const otherUser = getOtherUserInfo(conversation);
                 
                 return (
                   <div
@@ -174,9 +197,9 @@ function DashboardPage() {
                     className="conversation-item"
                     onClick={() => handleJoinConversation(conversation.id)}
                   >
-                    <Avatar username={`User ${otherUserId}`} />
+                    <Avatar username={otherUser.username} />
                     <div className="conversation-info">
-                      <h4>User {otherUserId}</h4>
+                      <h4>{otherUser.username}</h4>
                       <p>Private conversation</p>
                     </div>
                     <div className="conversation-arrow">
@@ -188,12 +211,19 @@ function DashboardPage() {
             ) : (
               <div className="empty-state">
                 <p>No private conversations yet</p>
-                <p className="empty-hint">Start chatting in rooms to begin private conversations</p>
+                <p className="empty-hint">Click "New Chat" to start a private conversation</p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {showUserSearch && (
+        <UserSearch
+          onUserSelect={handleUserSelect}
+          onClose={() => setShowUserSearch(false)}
+        />
+      )}
     </div>
   );
 }
